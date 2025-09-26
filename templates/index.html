@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Blockchain Node</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Kaisei+Tokumin:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', 'Kaisei Tokumin', Arial, sans-serif;
+            margin: 0;
+            background: linear-gradient(135deg, #3a0ca3 0%, #7209b7 40%, #b5179e 80%, #f72585 100%);
+            min-height: 100vh;
+            color: #f3e8ff;
+            position: relative;
+            overflow-x: hidden;
+        }
+        header {
+            background: linear-gradient(90deg, #7209b7 60%, #b5179e 100%);
+            color: #fff;
+            padding: 2em 0 1em 0;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 4px 24px #7209b755;
+        }
+        header h1 {
+            font-family: 'Kaisei Tokumin', serif;
+            font-size: 2.5em;
+            margin: 0;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 16px #b5179e, 0 0 2px #fff;
+        }
+        .sakura {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 180px;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .bento {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2em;
+            justify-content: center;
+            margin: 2em auto;
+            max-width: 1100px;
+        }
+        .bento-box {
+            background: rgba(58,12,163,0.85);
+            border-radius: 18px;
+            box-shadow: 0 4px 24px #b5179e55, 0 1.5px 0 #f72585;
+            padding: 2em 1.5em 1.5em 1.5em;
+            min-width: 270px;
+            flex: 1 1 320px;
+            margin-bottom: 1em;
+            position: relative;
+            border: 2px solid #b5179e;
+        }
+        .bento-box h2 {
+            font-family: 'Kaisei Tokumin', serif;
+            color: #f72585;
+            margin-top: 0;
+            text-shadow: 0 1px 8px #7209b7;
+        }
+        .block {
+            background: rgba(114,9,183,0.15);
+            border-left: 5px solid #f72585;
+            border-radius: 8px;
+            margin-bottom: 1em;
+            padding: 1em;
+            box-shadow: 0 1px 4px #b5179e33;
+        }
+        .tx {
+            color: #f3e8ff;
+            font-weight: 500;
+        }
+        .peer {
+            font-family: monospace;
+            color: #b5179e;
+        }
+        label {
+            display: block;
+            margin-top: 0.7em;
+            font-weight: 600;
+            color: #f3e8ff;
+        }
+        input, button, textarea {
+            font-size: 1em;
+            padding: 0.5em;
+            margin-top: 0.2em;
+            border-radius: 6px;
+            border: 1px solid #b5179e;
+            background: #fff0fa;
+            color: #3a0ca3;
+        }
+        input:focus, textarea:focus {
+            outline: 2px solid #7209b7;
+        }
+        button {
+            background: linear-gradient(90deg, #b5179e 60%, #f72585 100%);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            margin-top: 1em;
+            font-weight: 700;
+            box-shadow: 0 2px 8px #b5179e55;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: linear-gradient(90deg, #f72585 60%, #b5179e 100%);
+        }
+        .success { color: #43e97b; }
+        .error { color: #ffb4b4; }
+        .response { margin-top: 1em; }
+        .live-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f72585; margin-right: 0.5em; }
+        .lightning {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100px;
+            pointer-events: none;
+            z-index: 3;
+        }
+        ::selection { background: #b5179e44; }
+        @media (max-width: 900px) {
+            .bento { flex-direction: column; gap: 1em; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <canvas class="sakura"></canvas>
+    <canvas class="lightning"></canvas>
+    <h1>🌸 Nodes 🌸</h1>
+</header>
+<main>
+    <div class="bento">
+        <div class="bento-box">
+            <h2>Blockchain</h2>
+            <div id="chain"></div>
+        </div>
+        <div class="bento-box">
+            <h2>Peers</h2>
+            <ul id="peers"></ul>
+            <form id="peer-form">
+                <label for="peer-input">Add Peer (ip:port):</label>
+                <input id="peer-input" type="text" placeholder="127.0.0.1:8001" required>
+                <button type="submit">Register Peer</button>
+            </form>
+            <div id="peer-response" class="response"></div>
+        </div>
+    </div>
+    <div class="bento">
+        <div class="bento-box">
+            <h2>Transaction Pool</h2>
+            <ul id="mempool"></ul>
+            <form id="tx-form">
+                <label>Sender:</label>
+                <input id="tx-sender" type="text" required>
+                <label>Recipient:</label>
+                <input id="tx-recipient" type="text" required>
+                <label>Amount:</label>
+                <input id="tx-amount" type="number" min="0.01" step="0.01" required>
+                <button type="submit">Add Transaction</button>
+            </form>
+            <div id="tx-response" class="response"></div>
+        </div>
+        <div class="bento-box">
+            <h2>Actions</h2>
+            <button id="mine-btn">Mine Block ⚡</button>
+            <button id="consensus-btn">Trigger Consensus</button>
+            <div id="action-response" class="response"></div>
+            <div style="margin-top:1em;"><span class="live-dot"></span>Live updates enabled</div>
+        </div>
+    </div>
+</main>
+<script>
+// Sakura Petal Animation
+const sakuraCanvas = document.querySelector('.sakura');
+const ctx = sakuraCanvas.getContext('2d');
+let petals = [];
+function resizeSakura() {
+    sakuraCanvas.width = window.innerWidth;
+    sakuraCanvas.height = 180;
+}
+window.addEventListener('resize', resizeSakura);
+resizeSakura();
+function createPetal() {
+    return {
+        x: Math.random() * sakuraCanvas.width,
+        y: Math.random() * sakuraCanvas.height,
+        r: 8 + Math.random() * 8,
+        d: 1 + Math.random() * 2,
+        tilt: Math.random() * 2 * Math.PI,
+        tiltSpeed: 0.01 + Math.random() * 0.02,
+        color: 'rgba(255,183,197,0.7)'
+    };
+}
+for (let i = 0; i < 24; i++) petals.push(createPetal());
+function drawPetals() {
+    ctx.clearRect(0, 0, sakuraCanvas.width, sakuraCanvas.height);
+    for (let p of petals) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.tilt);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(-p.r/2, -p.r/2, -p.r, p.r/2, 0, p.r);
+        ctx.bezierCurveTo(p.r, p.r/2, p.r/2, -p.r/2, 0, 0);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = '#fff';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.restore();
+        p.x += Math.sin(p.tilt) * 0.7;
+        p.y += p.d;
+        p.tilt += p.tiltSpeed;
+        if (p.y > sakuraCanvas.height + 20) {
+            Object.assign(p, createPetal(), {y: -20});
+        }
+        if (p.x < -20 || p.x > sakuraCanvas.width + 20) {
+            Object.assign(p, createPetal(), {x: Math.random() * sakuraCanvas.width, y: -20});
+        }
+    }
+}
+setInterval(drawPetals, 30);
+
+// Lightning Animation
+const lightningCanvas = document.querySelector('.lightning');
+const lctx = lightningCanvas.getContext('2d');
+function resizeLightning() {
+    lightningCanvas.width = window.innerWidth;
+    lightningCanvas.height = 100;
+}
+window.addEventListener('resize', resizeLightning);
+resizeLightning();
+function drawLightning() {
+    lctx.clearRect(0, 0, lightningCanvas.width, lightningCanvas.height);
+    if (Math.random() < 0.07) {
+        let x = Math.random() * lightningCanvas.width;
+        let y = 0;
+        lctx.save();
+        lctx.strokeStyle = '#fff';
+        lctx.shadowColor = '#f72585';
+        lctx.shadowBlur = 16;
+        lctx.lineWidth = 2 + Math.random() * 2;
+        lctx.beginPath();
+        lctx.moveTo(x, y);
+        for (let i = 0; i < 8; i++) {
+            x += (Math.random() - 0.5) * 30;
+            y += 12 + Math.random() * 10;
+            lctx.lineTo(x, y);
+        }
+        lctx.stroke();
+        lctx.restore();
+    }
+}
+setInterval(drawLightning, 80);
+
+// --- Blockchain UI Logic (same as before) ---
+const chainDiv = document.getElementById('chain');
+const peersUl = document.getElementById('peers');
+const mempoolUl = document.getElementById('mempool');
+const txForm = document.getElementById('tx-form');
+const peerForm = document.getElementById('peer-form');
+const mineBtn = document.getElementById('mine-btn');
+const consensusBtn = document.getElementById('consensus-btn');
+const txResponse = document.getElementById('tx-response');
+const peerResponse = document.getElementById('peer-response');
+const actionResponse = document.getElementById('action-response');
+
+function renderChain(chain) {
+    chainDiv.innerHTML = '';
+    chain.forEach(block => {
+        const blockDiv = document.createElement('div');
+        blockDiv.className = 'block';
+        blockDiv.innerHTML = `<b>Block #${block.index}</b> <br>Hash: <span style="font-family:monospace">${block.hash}</span><br>Prev: <span style="font-family:monospace">${block.previous_hash}</span><br>Nonce: ${block.nonce}<br><em>Transactions:</em><ul>${block.transactions.map(tx => `<li class='tx'>${tx.sender} → ${tx.recipient}: ${tx.amount} (${tx.txid || ''})</li>`).join('')}</ul>`;
+        chainDiv.appendChild(blockDiv);
+    });
+}
+
+function renderPeers(peers) {
+    peersUl.innerHTML = '';
+    peers.forEach(peer => {
+        const li = document.createElement('li');
+        li.className = 'peer';
+        li.textContent = peer;
+        peersUl.appendChild(li);
+    });
+}
+
+function renderMempool(mempool) {
+    mempoolUl.innerHTML = '';
+    if (mempool.length === 0) {
+        mempoolUl.innerHTML = '<li>No pending transactions.</li>';
+        return;
+    }
+    mempool.forEach(tx => {
+        const li = document.createElement('li');
+        li.className = 'tx';
+        li.textContent = `${tx.sender} → ${tx.recipient}: ${tx.amount} (${tx.txid || ''})`;
+        mempoolUl.appendChild(li);
+    });
+}
+
+async function fetchState() {
+    const [chainRes, peersRes, mempoolRes] = await Promise.all([
+        fetch('/chain'),
+        fetch('/nodes'),
+        fetch('/mempool')
+    ]);
+    const chainData = await chainRes.json();
+    const peersData = await peersRes.json();
+    const mempoolData = await mempoolRes.json();
+    renderChain(chainData.chain);
+    renderPeers(peersData.nodes);
+    renderMempool(mempoolData.mempool);
+}
+
+txForm.onsubmit = async (e) => {
+    e.preventDefault();
+    txResponse.textContent = '';
+    const sender = document.getElementById('tx-sender').value;
+    const recipient = document.getElementById('tx-recipient').value;
+    const amount = parseFloat(document.getElementById('tx-amount').value);
+    try {
+        const res = await fetch('/transactions/new', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sender, recipient, amount })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            txResponse.textContent = data.message;
+            txResponse.className = 'response success';
+            txForm.reset();
+        } else {
+            txResponse.textContent = data.detail || 'Error adding transaction.';
+            txResponse.className = 'response error';
+        }
+    } catch (err) {
+        txResponse.textContent = 'Network error.';
+        txResponse.className = 'response error';
+    }
+};
+
+peerForm.onsubmit = async (e) => {
+    e.preventDefault();
+    peerResponse.textContent = '';
+    const peer = document.getElementById('peer-input').value;
+    try {
+        const res = await fetch('/nodes/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nodes: [peer] })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            peerResponse.textContent = data.message;
+            peerResponse.className = 'response success';
+            peerForm.reset();
+            fetchState();
+        } else {
+            peerResponse.textContent = data.detail || 'Error registering peer.';
+            peerResponse.className = 'response error';
+        }
+    } catch (err) {
+        peerResponse.textContent = 'Network error.';
+        peerResponse.className = 'response error';
+    }
+};
+
+mineBtn.onclick = async () => {
+    actionResponse.textContent = '';
+    try {
+        const res = await fetch('/mine');
+        const data = await res.json();
+        if (res.ok) {
+            actionResponse.textContent = data.message;
+            actionResponse.className = 'response success';
+        } else {
+            actionResponse.textContent = data.detail || 'Error mining block.';
+            actionResponse.className = 'response error';
+        }
+    } catch (err) {
+        actionResponse.textContent = 'Network error.';
+        actionResponse.className = 'response error';
+    }
+};
+
+consensusBtn.onclick = async () => {
+    actionResponse.textContent = '';
+    try {
+        const res = await fetch('/nodes/resolve');
+        const data = await res.json();
+        if (res.ok) {
+            actionResponse.textContent = data.message;
+            actionResponse.className = 'response success';
+        } else {
+            actionResponse.textContent = data.detail || 'Error triggering consensus.';
+            actionResponse.className = 'response error';
+        }
+    } catch (err) {
+        actionResponse.textContent = 'Network error.';
+        actionResponse.className = 'response error';
+    }
+};
+
+function connectWS() {
+    let wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    let ws = new WebSocket(`${wsProto}://${window.location.host}/ws`);
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.event === 'new_block' || data.event === 'chain_replaced') {
+            fetchState();
+        } else if (data.event === 'new_transaction') {
+            fetchState();
+        }
+    };
+    ws.onclose = () => setTimeout(connectWS, 1000);
+}
+
+fetchState();
+connectWS();
+</script>
+</body>
+</html> 
